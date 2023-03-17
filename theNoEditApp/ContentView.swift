@@ -9,49 +9,69 @@ struct ContentView: View {
     
     var body: some View {
         VStack {
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: gridSize))]) {
-                    ForEach(images, id: \.self) { image in
-                        Image(nsImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: gridSize, height: gridSize)
-                            .onTapGesture {
-                                if let id = imageIDs[image] {
-                                    if selectedImages.contains(id) {
-                                        selectedImages.remove(id)
-                                    } else {
-                                        selectedImages.insert(id)
+            VStack(spacing: 0) {
+                HStack(spacing: 16) {
+                    Slider(value: $gridSize, in: CGFloat(50)...CGFloat(600)) {
+                        EmptyView()
+                    } minimumValueLabel: {
+                        Image(systemName: "minus")
+                    } maximumValueLabel: {
+                        Image(systemName: "plus")
+                    }
+                    .frame(maxWidth: 160)
+
+                    Spacer()
+                    
+                    Button(action: {
+                        let panel = NSOpenPanel()
+                        panel.allowsMultipleSelection = true
+                        panel.canChooseDirectories = true
+                        panel.begin { response in
+                            if response == NSApplication.ModalResponse.OK {
+                                for url in panel.urls {
+                                    if let image = NSImage(contentsOf: url) {
+                                        images.append(image)
+                                        imageIDs[image] = UUID()
                                     }
                                 }
                             }
-                            .border(selectedImages.contains(imageIDs[image]!) ? Color.blue : Color.clear)
+                        }
+                    }) {
+                        Text("Import Images")
+                        .frame(maxWidth: 160)
                     }
+
                 }
+                .frame(maxWidth: .infinity)
+                .padding(16)
+                .background(.thinMaterial)
+                Divider()
             }
+
             
-            HStack(spacing: 20) {
-                Button("Import Images") {
-                    let panel = NSOpenPanel()
-                    panel.allowsMultipleSelection = true
-                    panel.canChooseDirectories = true
-                    panel.begin { response in
-                        if response == NSApplication.ModalResponse.OK {
-                            for url in panel.urls {
-                                if let image = NSImage(contentsOf: url) {
-                                    images.append(image)
-                                    imageIDs[image] = UUID()
+            ScrollView {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: gridSize))], spacing: 0) {
+                    ForEach(images, id: \.self) { image in
+                        ZStack {
+                            Image(nsImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: gridSize, height: gridSize)
+                                .onTapGesture {
+                                    if let id = imageIDs[image] {
+                                        if selectedImages.contains(id) {
+                                            selectedImages.remove(id)
+                                        } else {
+                                            selectedImages.insert(id)
+                                        }
+                                    }
                                 }
-                            }
+                                .border(selectedImages.contains(imageIDs[image]!) ? Color.blue : Color.clear)
+                            //MARK: Add overlay checkbox here to show if the item is selected or not.
                         }
                     }
                 }
-                
-                Slider(value: $gridSize, in: CGFloat(100)...CGFloat(600), label: {
-                    Text("Size")
-                }).frame(maxWidth: 400)
-
-            }.padding()
+            }
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
