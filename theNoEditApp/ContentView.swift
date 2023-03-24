@@ -68,7 +68,6 @@ struct ContentView: View {
                                     .aspectRatio(contentMode: showSquareImages ? .fill: .fit)
                                     .frame(width: gridSize, height: gridSize)
                                     .clipped()
-                                    .border(selectedImages.contains(imageIDs[image]!) ? Color.blue : Color.clear)
                                     .overlay(alignment: .topLeading) {
                                         selectedImages.contains(imageIDs[image]!) ?
                                         Image(systemName:"checkmark.circle.fill")
