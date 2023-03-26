@@ -2,9 +2,14 @@ import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
 
+struct ImageModel: Identifiable, Equatable {
+    var id: UUID = UUID()
+    var url: URL
+    var data: NSImage
+}
+
 struct ContentView: View {
-    @State private var images = [NSImage]()
-    @State private var imageIDs = [NSImage: UUID]()
+    @State private var images = [ImageModel]()
     @State private var selectedImages = Set<UUID>()
     @State private var gridSize: CGFloat = 100
     @State private var maxGridSize: CGFloat = 1200
@@ -36,7 +41,7 @@ struct ContentView: View {
                         
                         Button(action: handleImport) {
                             Text("Import Images")
-                                .frame(maxWidth: 160)
+                                .frame(maxWidth: 120)
                         }.disabled(isImportingImages)
                     }
                     .frame(maxWidth: .infinity)
@@ -48,31 +53,28 @@ struct ContentView: View {
                 // MARK: Image Grid
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: gridSize), spacing: 0)], spacing: 32) {
-                        ForEach(images, id: \.self) { image in
+                        ForEach(images) { image in
+                            let isSelected = selectedImages.contains(image.id)
+                            let overlayImageName = isSelected ? "checkmark.circle.fill" : "circle"
+
                             VStack {
-                                Image(nsImage: image)
+                                Image(nsImage: image.data)
                                     .resizable()
                                     .aspectRatio(contentMode: showSquareImages ? .fill: .fit)
                                     .frame(width: gridSize, height: gridSize)
                                     .clipped()
                                     .overlay(alignment: .topLeading) {
-                                        selectedImages.contains(imageIDs[image]!) ?
-                                        Image(systemName:"checkmark.circle.fill")
-                                            .foregroundColor(.white)
-                                            .padding([.top, .leading], 4):
-                                        Image(systemName:"circle")
+                                        Image(systemName: overlayImageName)
                                             .foregroundColor(.white)
                                             .padding([.top, .leading], 4)
                                     }
                             }
                             .background(.white)
                             .onTapGesture {
-                                if let id = imageIDs[image] {
-                                    if selectedImages.contains(id) {
-                                        selectedImages.remove(id)
-                                    } else {
-                                        selectedImages.insert(id)
-                                    }
+                                if isSelected {
+                                    selectedImages.remove(image.id)
+                                } else {
+                                    selectedImages.insert(image.id)
                                 }
                             }
                         }
@@ -104,6 +106,7 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .animation(.easeInOut, value: showSquareImages)
+        .animation(.easeInOut, value: images)
     }
     
     private func handleImport() {
@@ -117,10 +120,11 @@ struct ContentView: View {
             Task.detached {
                 if response == NSApplication.ModalResponse.OK {
                     for url in await panel.urls {
-                        let image = downsample(imageAt: url, to: CGSize(width: 400, height: 400), scale: 1)
+                        let data = downsample(imageAt: url, to: CGSize(width: 400, height: 400), scale: 1)
+                        
+                        // Sending the following operation to main thread to refresh the UI.
                         DispatchQueue.main.async {
-                            images.append(image)
-                            imageIDs[image] = UUID()
+                            images.append(ImageModel(url: url, data: data))
                         }
                     }
                     
@@ -135,11 +139,12 @@ struct ContentView: View {
                     // } catch {
                     //     print("Caught an error")
                     // }
-                    isImportingImages = false
+                    DispatchQueue.main.async {
+                        isImportingImages = false
+                    }
                 }
             }
         }
-        isImportingImages = false
     }
     
     private func downsample(imageAt imageURL: URL, to pointSize: CGSize, scale: CGFloat) -> NSImage {
