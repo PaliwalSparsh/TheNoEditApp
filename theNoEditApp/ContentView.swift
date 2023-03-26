@@ -9,11 +9,11 @@ struct ContentView: View {
     @State private var gridSize: CGFloat = 100
     @State private var maxGridSize: CGFloat = 1200
     @State private var showSquareImages: Bool = false
-    @State private var isImportingImages: Bool = true
+    @State private var isImportingImages: Bool = false
     
     var body: some View {
         GeometryReader { geo in
-            VStack {
+            VStack(spacing: 0) {
                 VStack(spacing: 0) {
                     // MARK: toolbar
                     HStack(spacing: 16) {
@@ -37,14 +37,14 @@ struct ContentView: View {
                         Button(action: handleImport) {
                             Text("Import Images")
                                 .frame(maxWidth: 160)
-                        }
+                        }.disabled(isImportingImages)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(16)
                     .background(.thinMaterial)
                     Divider()
                 }
-
+                
                 // MARK: Image Grid
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: gridSize), spacing: 0)], spacing: 32) {
@@ -86,11 +86,18 @@ struct ContentView: View {
                     maxGridSize = geo.size.height - 18
                     gridSize = ratio * maxGridSize
                 }
-                .overlay {
+                .overlay(alignment: .topLeading) {
                     if(isImportingImages) {
-                        ProgressView()
-                    }else{
-                        EmptyView()
+                        VStack(alignment: .leading, spacing: 0) {
+                            HStack() {
+                                ProgressView().scaleEffect(0.5)
+                                Text("Importing images...")
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 8)
+                            .background(.ultraThickMaterial)
+                            Divider()
+                        }
                     }
                 }
             }
@@ -100,18 +107,22 @@ struct ContentView: View {
     }
     
     private func handleImport() {
-        isImportingImages = true
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.png, .jpeg, .rawImage, .tiff, .heif, .heic]
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = true
         panel.begin { response in
-            if response == NSApplication.ModalResponse.OK {
-                for url in panel.urls {
-                    
-                    let image = downsample(imageAt: url, to: CGSize(width: 400, height: 400), scale: 1)
-                    images.append(image)
-                    imageIDs[image] = UUID()
+            isImportingImages = true
+            // Here we have 1 whole task responsible for importing all photos, we can also try creating Tasks for each import.
+            Task.detached {
+                if response == NSApplication.ModalResponse.OK {
+                    for url in await panel.urls {
+                        let image = downsample(imageAt: url, to: CGSize(width: 400, height: 400), scale: 1)
+                        DispatchQueue.main.async {
+                            images.append(image)
+                            imageIDs[image] = UUID()
+                        }
+                    }
                     
                     // MARK: This set of code was meant to be used if users selects a directory instead of individual images
                     // do {
@@ -124,6 +135,7 @@ struct ContentView: View {
                     // } catch {
                     //     print("Caught an error")
                     // }
+                    isImportingImages = false
                 }
             }
         }
