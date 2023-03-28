@@ -11,7 +11,11 @@ import SwiftUI
 struct theNoEditAppApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            NavigationView {
+                SidebarView()
+                ContentView()
+                    .frame(minWidth: 400, minHeight: 400)
+            }
         }
     }
 }

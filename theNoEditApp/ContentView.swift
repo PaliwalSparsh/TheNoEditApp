@@ -3,7 +3,7 @@ import AppKit
 import UniformTypeIdentifiers
 import QuickLookThumbnailing
 
-let MINIMUM_POSSIBLE_SIZE_OF_GRID: CGFloat = 600
+let MINIMUM_POSSIBLE_SIZE_OF_GRID: CGFloat = 400
 
 struct ImageModel: Identifiable, Equatable {
     var id: UUID = UUID()
@@ -21,44 +21,12 @@ struct ContentView: View {
     var body: some View {
         GeometryReader { geo in
             VStack(spacing: 0) {
-                VStack(spacing: 0) {
-                    // MARK: toolbar
-                    HStack(spacing: 16) {
-                        HStack(spacing: 0) {
-                            Slider(value: $gridSize, in: CGFloat(100)...CGFloat(maxGridSize), step: CGFloat(100)) {
-                                EmptyView()
-                            } minimumValueLabel: {
-                                Image(systemName: "minus")
-                            } maximumValueLabel: {
-                                Image(systemName: "plus")
-                            }
-                            .frame(maxWidth: 160)
-                            Toggle(isOn: $showSquareImages) {
-                                Image(systemName: "rectangle.expand.vertical" )
-                            }.labelsHidden()
-                                .toggleStyle(.button)
-                        }
-                        
-                        Spacer()
-                        Button(action: handleImport) {
-                            Text("Import Images")
-                                .frame(maxWidth: 120)
-                        }
-                        
-                        ShareLink(items: images.filter{selectedImages.contains($0.id)}.map{$0.url})
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(16)
-                    .background(.thinMaterial)
-                    Divider()
-                }
-                
                 if(selectedImages.count > 0) {
-                    VStack(spacing: 0) {
+                    VStack(alignment: .leading, spacing: 0) {
                         HStack(alignment: .center, spacing:0) {
                             Text("**\(selectedImages.count)** images select")
                         }
-                        .frame(maxWidth: .infinity, maxHeight: 40)
+                        .frame(maxWidth: .infinity, maxHeight: 24)
                         .background(.ultraThickMaterial)
                         .padding(.horizontal, 8)
                         Divider()
@@ -108,7 +76,40 @@ struct ContentView: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Slider(value: $gridSize, in: CGFloat(100)...CGFloat(maxGridSize), step: CGFloat(100))
+                {
+                    EmptyView()
+                } minimumValueLabel: {
+                    Image(systemName: "minus")
+                } maximumValueLabel: {
+                    Image(systemName: "plus")
+                }.frame(minWidth: 120)
+
+            }
+            
+            ToolbarItem(placement: .navigation) {
+                Toggle(isOn: $showSquareImages) {
+                    Image(systemName: "rectangle.expand.vertical" )
+                }
+                    .labelsHidden()
+                    .toggleStyle(.button)
+            }
+
+            ToolbarItem(placement: .primaryAction) {
+                ShareLink(items: images.filter{selectedImages.contains($0.id)}.map{$0.url})
+            }
+            
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: handleImport) {
+                    Text("Import Images")
+                        .frame(maxWidth: 120)
+                }
+            }
+        }
+        .navigationTitle("")
+//        .navigationSubtitle("View Camera Photos Faster")
         .animation(.easeInOut, value: showSquareImages)
         .animation(.easeInOut, value: images)
     }
@@ -135,6 +136,7 @@ struct ContentView: View {
         }
     }
 }
+
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
